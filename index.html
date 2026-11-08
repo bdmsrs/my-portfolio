@@ -90,7 +90,7 @@ footer{text-align:center;color:var(--muted);padding:24px;border-top:1px solid va
 </aside>
 
 <script>
-const PRODUCTS=[
+let PRODUCTS=[
 {id:1,n:"ওয়্যারলেস হেডফোন",c:"ইলেকট্রনিক্স",p:1850,o:2400,e:"🎧",bg:"#dbeafe"},
 {id:2,n:"স্মার্টওয়াচ",c:"ইলেকট্রনিক্স",p:3200,o:0,e:"⌚",bg:"#e0e7ff"},
 {id:3,n:"পাওয়ার ব্যাংক ১০০০০mAh",c:"ইলেকট্রনিক্স",p:1250,o:1600,e:"🔋",bg:"#dcfce7"},
@@ -111,19 +111,18 @@ let cart={},cat="সব",query="",sort="";
 try{cart=JSON.parse(localStorage.getItem("cart")||"{}")}catch(e){}
 const save=()=>{try{localStorage.setItem("cart",JSON.stringify(cart))}catch(e){}};
 
-const cats=["সব",...new Set(PRODUCTS.map(p=>p.c))];
+function buildTools(){const cats=["সব",...new Set(PRODUCTS.map(p=>p.c))];
 $("#tools").innerHTML=cats.map(c=>`<button class="chip" data-c="${c}" aria-pressed="${c===cat}">${c}</button>`).join("")+
-`<select id="sort" aria-label="সাজান"><option value="">সাজান</option><option value="a">দাম: কম থেকে বেশি</option><option value="d">দাম: বেশি থেকে কম</option></select>`;
+`<select id="sort" aria-label="সাজান"><option value="">সাজান</option><option value="a">দাম: কম থেকে বেশি</option><option value="d">দাম: বেশি থেকে কম</option></select>`;$("#sort").onchange=e=>{sort=e.target.value;render()};}
 $("#tools").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;cat=b.dataset.c;
   document.querySelectorAll(".chip").forEach(x=>x.setAttribute("aria-pressed",x.dataset.c===cat));render()};
-$("#sort").onchange=e=>{sort=e.target.value;render()};
 $("#q").oninput=e=>{query=e.target.value.trim();render()};
 
 function render(){
   let list=PRODUCTS.filter(p=>(cat==="সব"||p.c===cat)&&p.n.includes(query));
   if(sort==="a")list.sort((a,b)=>a.p-b.p);if(sort==="d")list.sort((a,b)=>b.p-a.p);
   $("#grid").innerHTML=list.length?list.map(p=>`<article class="card">
-    <div class="pic" style="background:${p.bg}">${p.o?`<span class="tag">${bn(Math.round((1-p.p/p.o)*100))}% ছাড়</span>`:""}<span aria-hidden="true">${p.e}</span></div>
+    <div class="pic" style="background:${p.bg}">${p.o?`<span class="tag">${bn(Math.round((1-p.p/p.o)*100))}% ছাড়</span>`:""}${p.i?`<img src="${p.i}" alt="" style="width:100%;height:100%;object-fit:cover">`:`<span aria-hidden="true">${p.e||"🛍️"}</span>`}</div>
     <div class="info"><span class="cat">${p.c}</span><h3>${p.n}</h3>
     <div class="price" style="color:var(--ink)">${tk(p.p)}${p.o?`<s>${tk(p.o)}</s>`:""}</div>
     <button class="add" data-id="${p.id}">কার্টে যোগ করুন</button></div></article>`).join(""):
@@ -132,7 +131,7 @@ function render(){
 $("#grid").onclick=e=>{const b=e.target.closest(".add");if(!b)return;
   cart[b.dataset.id]=(cart[b.dataset.id]||0)+1;save();badge();b.textContent="✓ যোগ হয়েছে";setTimeout(()=>b.textContent="কার্টে যোগ করুন",900)};
 
-const entries=()=>Object.entries(cart).map(([id,q])=>({p:PRODUCTS.find(x=>x.id==id),q}));
+const entries=()=>Object.entries(cart).map(([id,q])=>({p:PRODUCTS.find(x=>x.id==id),q})).filter(i=>i.p);
 const sub=()=>entries().reduce((s,i)=>s+i.p.p*i.q,0);
 const badge=()=>$("#cnt").textContent=bn(Object.values(cart).reduce((a,b)=>a+b,0));
 
@@ -144,7 +143,7 @@ document.onkeydown=e=>{if(e.key==="Escape")shut()};
 function showCart(){
   $("#title").textContent="আপনার কার্ট";
   const it=entries();
-  $("#body").innerHTML=`<div class="items">${it.length?it.map(({p,q})=>`<div class="row"><span class="e">${p.e}</span>
+  $("#body").innerHTML=`<div class="items">${it.length?it.map(({p,q})=>`<div class="row"><span class="e">${p.e||"🛍️"}</span>
     <div class="n">${p.n}<br><small>${tk(p.p)}</small></div>
     <div class="qty"><button data-m="${p.id}" aria-label="কমান">−</button><span>${bn(q)}</span><button data-a="${p.id}" aria-label="বাড়ান">+</button></div></div>`).join(""):
     `<p class="empty" style="padding:40px 0">কার্ট খালি। পছন্দের পণ্য যোগ করুন।</p>`}</div>
@@ -181,7 +180,8 @@ function showForm(){
   };
 }
 
-render();badge();
+buildTools();render();badge();
+fetch("products.json",{cache:"no-store"}).then(r=>r.ok?r.json():Promise.reject()).then(d=>{if(Array.isArray(d)){PRODUCTS=d;cat="সব";buildTools();render();badge()}}).catch(()=>{});
 </script>
 </body>
 </html>
